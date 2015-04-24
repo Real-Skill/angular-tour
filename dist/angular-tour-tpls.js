@@ -16,13 +16,14 @@
   angular.module('tour/tour.tpl.html', []).run([
     '$templateCache',
     function ($templateCache) {
-      $templateCache.put('tour/tour.tpl.html', '<div class="tour-tip">\n' + '    <span class="tour-arrow tt-{{ ttPlacement }}" ng-hide="centered"></span>\n' + '    <div class="tour-content-wrapper">\n' + '        <p ng-bind="ttContent"></p>\n' + '        <a ng-click="proceed()" ng-bind="ttNextLabel" class="small button tour-next-tip"></a>\n' + '        <a ng-click="closeTour()" class="tour-close-tip">&times;</a>\n' + '    </div>\n' + '</div>');
+      $templateCache.put('tour/tour.tpl.html', '<div class="tour-tip">\n' + '    <span class="tour-arrow tt-{{ ttPlacement }}" ng-hide="centered"></span>\n' + '    <div class="tour-content-wrapper">\n' + '        <p ng-bind="ttContent"></p>\n' + '        <a ng-click="back()" ng-bind="ttBackLabel" ng-if="getCurrentStep()>0" class="small button tour-next-tip"></a>\n' + '        <a ng-click="proceed()" ng-bind="ttNextLabel" class="small button tour-next-tip"></a>\n' + '        <a ng-click="closeTour()" class="tour-close-tip">&times;</a>\n' + '    </div>\n' + '</div>');
     }
   ]);
   angular.module('angular-tour.tour', []).constant('tourConfig', {
     placement: 'top',
     animation: true,
     nextLabel: 'Next',
+    backLabel: 'Back',
     scrollSpeed: 500,
     offset: 28,
     backDrop: false,
@@ -167,6 +168,9 @@
           attrs.$observe('tourtipNextLabel', function (val) {
             scope.ttNextLabel = val || tourConfig.nextLabel;
           });
+          attrs.$observe('tourtipBackLabel', function (val) {
+            scope.ttBackLabel = val || tourConfig.backLabel;
+          });
           attrs.$observe('tourtipOffset', function (val) {
             scope.ttOffset = parseInt(val, 10) || tourConfig.offset;
           });
@@ -196,6 +200,7 @@
 
           //Init assignments (fix for Angular 1.3+)
           scope.ttNextLabel = tourConfig.nextLabel;
+          scope.ttBackLabel = tourConfig.backLabel;
           scope.ttPlacement = tourConfig.placement.toLowerCase().trim();
           scope.centered = false;
           scope.ttOffset = tourConfig.offset;
@@ -335,6 +340,9 @@
               }, 100);
             }
             scope.setCurrentStep(scope.getCurrentStep() + 1);
+          };
+          scope.back = function () {
+            scope.setCurrentStep(scope.getCurrentStep() - 1);
           };
         }
       };
