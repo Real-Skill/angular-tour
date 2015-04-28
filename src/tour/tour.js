@@ -9,6 +9,7 @@ angular.module('angular-tour.tour', [])
   .constant('tourConfig', {
     placement        : 'top',                  // default placement relative to target. 'top', 'right', 'left', 'bottom'
     animation        : true,                   // if tips fade in
+    previousLabel    : 'Previous',             // default text in the previous tip button
     nextLabel        : 'Next',                 // default text in the next tip button
     scrollSpeed      : 500,                    // page scrolling speed in milliseconds
     offset           : 28,                     // how many pixels offset the tip is from the target
@@ -88,6 +89,11 @@ angular.module('angular-tour.tour', [])
     $scope.closeTour = function() {
       self.cancelTour();
     };
+
+    $scope.finishTour = function () {
+      self.unselectAllSteps();
+      self.postTourCallback(true);
+    }
   })
 
   /**
@@ -100,6 +106,8 @@ angular.module('angular-tour.tour', [])
       restrict: 'EA',
       scope: true,
       link: function (scope, element, attrs, ctrl) {
+        ctrl.previousStep = [];
+
         if(!angular.isDefined(attrs.step)) {
           throw('The <tour> directive requires a `step` attribute to bind the current step to.');
         }
@@ -138,9 +146,24 @@ angular.module('angular-tour.tour', [])
         };
 
         // update the current step in the view as well as in our controller
-        scope.setCurrentStep = function(val) {
+        scope.setCurrentStep = function (val, goBack) {
           model.assign(scope.$parent, val);
+          if (!goBack) {
+            ctrl.previousStep.push(ctrl.currentStep);
+          }
           ctrl.currentStep = val;
+        };
+
+        scope.back = function () {
+          scope.setCurrentStep(scope.getPreviousStep(), true);
+        };
+
+        scope.skipStep = function () {
+          ctrl.currentStep++;
+        };
+
+        scope.getPreviousStep = function () {
+          return ctrl.previousStep.pop();
         };
 
         scope.getCurrentStep = function() {
@@ -175,6 +198,10 @@ angular.module('angular-tour.tour', [])
           scope.centered = (scope.ttPlacement.indexOf('center') === 0);
         });
 
+        attrs.$observe( 'tourtipPreviousLabel', function ( val ) {
+          scope.ttBackLabel = val || tourConfig.previousLabel;
+        });
+
         attrs.$observe( 'tourtipNextLabel', function ( val ) {
           scope.ttNextLabel = val || tourConfig.nextLabel;
         });
@@ -204,6 +231,7 @@ angular.module('angular-tour.tour', [])
         });
 
         //Init assignments (fix for Angular 1.3+)
+        scope.ttBackLabel = tourConfig.previousLabel;
         scope.ttNextLabel = tourConfig.nextLabel;
         scope.ttPlacement = tourConfig.placement.toLowerCase().trim();
         scope.centered = false;
@@ -212,6 +240,7 @@ angular.module('angular-tour.tour', [])
         scope.ttOpen = false;
         scope.ttAnimation = tourConfig.animation;
         scope.index = parseInt(attrs.tourtipStep, 10);
+        scope.last = attrs.hasOwnProperty('tourtipLast');
 
         var tourtip = $compile( template )( scope );
         tourCtrl.addStep(scope);
@@ -314,8 +343,15 @@ angular.module('angular-tour.tour', [])
 
           var targetElement = scope.ttElement ? angular.element(scope.ttElement) : element;
 
-          if(targetElement == null || targetElement.length === 0)
-            throw 'Target element could not be found. Selector: ' + scope.ttElement;
+          if(targetElement == null || targetElement.length === 0) {
+            if (targetElement == null || targetElement.length === 0) {
+              if (scope.last) {
+                scope.$parent.finishTour();
+              }
+              scope.skipStep();
+              return;
+            }
+          }
 
           angular.element('body').append(tourtip);
 

@@ -1,6 +1,6 @@
 /**
  * An AngularJS directive for showcasing features of your website
- * @version v0.1.2 - 2015-03-12
+ * @version v0.1.2 - 2015-04-28
  * @link https://github.com/DaftMonk/angular-tour
  * @author Tyler Henkel
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -16,14 +16,14 @@
   angular.module('tour/tour.tpl.html', []).run([
     '$templateCache',
     function ($templateCache) {
-      $templateCache.put('tour/tour.tpl.html', '<div class="tour-tip">\n' + '    <span class="tour-arrow tt-{{ ttPlacement }}" ng-hide="centered"></span>\n' + '    <div class="tour-content-wrapper">\n' + '        <p ng-bind="ttContent"></p>\n' + '        <a ng-click="back()" ng-bind="ttBackLabel" ng-if="getCurrentStep()>0" class="small button tour-next-tip"></a>\n' + '        <a ng-click="proceed()" ng-bind="ttNextLabel" class="small button tour-next-tip"></a>\n' + '        <a ng-click="closeTour()" class="tour-close-tip">&times;</a>\n' + '    </div>\n' + '</div>');
+      $templateCache.put('tour/tour.tpl.html', '<div class="tour-tip">\n' + '    <span class="tour-arrow tt-{{ ttPlacement }}" ng-hide="centered"></span>\n' + '    <div class="tour-content-wrapper">\n' + '        <p ng-bind="ttContent"></p>\n' + '        <a ng-click="back()" ng-bind="ttBackLabel" ng-show="getCurrentStep()>0" class="small button tour-next-tip"></a>\n' + '        <a ng-click="proceed()" ng-bind="ttNextLabel" class="small button tour-next-tip"></a>\n' + '        <a ng-click="closeTour()" class="tour-close-tip">&times;</a>\n' + '    </div>\n' + '</div>\n' + '');
     }
   ]);
   angular.module('angular-tour.tour', []).constant('tourConfig', {
     placement: 'top',
     animation: true,
+    previousLabel: 'Previous',
     nextLabel: 'Next',
-    backLabel: 'Back',
     scrollSpeed: 500,
     offset: 28,
     backDrop: false,
@@ -87,6 +87,10 @@
       $scope.closeTour = function () {
         self.cancelTour();
       };
+      $scope.finishTour = function () {
+        self.unselectAllSteps();
+        self.postTourCallback(true);
+      };
     }
   ]).directive('tour', [
     '$parse',
@@ -97,11 +101,9 @@
         restrict: 'EA',
         scope: true,
         link: function (scope, element, attrs, ctrl) {
+          ctrl.previousStep = [];
           if (!angular.isDefined(attrs.step)) {
             throw 'The <tour> directive requires a `step` attribute to bind the current step to.';
-          }
-          if( angular.isDefined( attrs.backDrop ) ) {
-            tourConfig.backDrop = attrs.backDrop === 'true';
           }
           var model = $parse(attrs.step);
           var backDrop = false;
@@ -132,9 +134,21 @@
             }
           };
           // update the current step in the view as well as in our controller
-          scope.setCurrentStep = function (val) {
+          scope.setCurrentStep = function (val, goBack) {
             model.assign(scope.$parent, val);
+            if (!goBack) {
+              ctrl.previousStep.push(ctrl.currentStep);
+            }
             ctrl.currentStep = val;
+          };
+          scope.back = function () {
+            scope.setCurrentStep(scope.getPreviousStep(), true);
+          };
+          scope.skipStep = function () {
+            ctrl.currentStep++;
+          };
+          scope.getPreviousStep = function () {
+            return ctrl.previousStep.pop();
           };
           scope.getCurrentStep = function () {
             return ctrl.currentStep;
@@ -165,11 +179,11 @@
             scope.ttPlacement = (val || tourConfig.placement).toLowerCase().trim();
             scope.centered = scope.ttPlacement.indexOf('center') === 0;
           });
+          attrs.$observe('tourtipPreviousLabel', function (val) {
+            scope.ttBackLabel = val || tourConfig.previousLabel;
+          });
           attrs.$observe('tourtipNextLabel', function (val) {
             scope.ttNextLabel = val || tourConfig.nextLabel;
-          });
-          attrs.$observe('tourtipBackLabel', function (val) {
-            scope.ttBackLabel = val || tourConfig.backLabel;
           });
           attrs.$observe('tourtipOffset', function (val) {
             scope.ttOffset = parseInt(val, 10) || tourConfig.offset;
@@ -190,17 +204,9 @@
           attrs.$observe('useSourceScope', function (val) {
             scope.ttSourceScope = !val ? tourConfig.useSourceScope : val === 'true';
           });
-
-
-          //disable scrolling
-          attrs.$observe('disableScrolling', function (val) {
-            scope.disableScrolling = val === 'true';
-          });
-
-
           //Init assignments (fix for Angular 1.3+)
+          scope.ttBackLabel = tourConfig.previousLabel;
           scope.ttNextLabel = tourConfig.nextLabel;
-          scope.ttBackLabel = tourConfig.backLabel;
           scope.ttPlacement = tourConfig.placement.toLowerCase().trim();
           scope.centered = false;
           scope.ttOffset = tourConfig.offset;
@@ -208,6 +214,7 @@
           scope.ttOpen = false;
           scope.ttAnimation = tourConfig.animation;
           scope.index = parseInt(attrs.tourtipStep, 10);
+          scope.last = attrs.hasOwnProperty('tourtipLast');
           var tourtip = $compile(template)(scope);
           tourCtrl.addStep(scope);
           // wrap this in a time out because the tourtip won't compile right away
@@ -293,17 +300,22 @@
               tourtip.css({ display: 'block' });
             }
             var targetElement = scope.ttElement ? angular.element(scope.ttElement) : element;
-            if (targetElement == null || targetElement.length === 0)
-              throw 'Target element could not be found. Selector: ' + scope.ttElement;
+            if (targetElement == null || targetElement.length === 0) {
+              if (targetElement == null || targetElement.length === 0) {
+                if (scope.last) {
+                  scope.$parent.finishTour();
+                }
+                scope.skipStep();
+                return;
+              }
+            }
             angular.element('body').append(tourtip);
             var updatePosition = function () {
               var ttPosition = calculatePosition(targetElement);
               // Now set the calculated positioning.
               tourtip.css(ttPosition);
               // Scroll to the tour tip
-              if( !scope.disableScrolling ) {
-                scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
-              }
+              scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
             };
             if (tourConfig.backDrop)
               focusActiveElement(targetElement);
@@ -340,9 +352,6 @@
               }, 100);
             }
             scope.setCurrentStep(scope.getCurrentStep() + 1);
-          };
-          scope.back = function () {
-            scope.setCurrentStep(scope.getCurrentStep() - 1);
           };
         }
       };

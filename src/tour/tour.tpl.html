@@ -2,6 +2,7 @@
     <span class="tour-arrow tt-{{ ttPlacement }}" ng-hide="centered"></span>
     <div class="tour-content-wrapper">
         <p ng-bind="ttContent"></p>
+        <a ng-click="back()" ng-bind="ttBackLabel" ng-show="getCurrentStep()>0" class="small button tour-next-tip"></a>
         <a ng-click="proceed()" ng-bind="ttNextLabel" class="small button tour-next-tip"></a>
         <a ng-click="closeTour()" class="tour-close-tip">&times;</a>
     </div>
