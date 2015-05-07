@@ -1,6 +1,6 @@
 /**
  * An AngularJS directive for showcasing features of your website
- * @version v0.1.2 - 2015-04-28
+ * @version v0.1.2 - 2015-05-07
  * @link https://github.com/DaftMonk/angular-tour
  * @author Tyler Henkel
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -94,6 +94,9 @@
           ctrl.previousStep = [];
           if (!angular.isDefined(attrs.step)) {
             throw 'The <tour> directive requires a `step` attribute to bind the current step to.';
+          }
+          if (angular.isDefined(attrs.backDrop)) {
+            tourConfig.backDrop = attrs.backDrop === 'true';
           }
           var model = $parse(attrs.step);
           var backDrop = false;
@@ -193,6 +196,10 @@
           //defaults: tourConfig.useSourceScope
           attrs.$observe('useSourceScope', function (val) {
             scope.ttSourceScope = !val ? tourConfig.useSourceScope : val === 'true';
+          });
+          //disable scrolling
+          attrs.$observe('disableScrolling', function (val) {
+            scope.disableScrolling = val === 'true';
           });
           //Init assignments (fix for Angular 1.3+)
           scope.ttBackLabel = tourConfig.previousLabel;
@@ -305,7 +312,9 @@
               // Now set the calculated positioning.
               tourtip.css(ttPosition);
               // Scroll to the tour tip
-              scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
+              if (!scope.disableScrolling) {
+                scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
+              }
             };
             if (tourConfig.backDrop)
               focusActiveElement(targetElement);

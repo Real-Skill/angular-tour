@@ -111,6 +111,9 @@ angular.module('angular-tour.tour', [])
         if(!angular.isDefined(attrs.step)) {
           throw('The <tour> directive requires a `step` attribute to bind the current step to.');
         }
+        if( angular.isDefined( attrs.backDrop ) ) {
+          tourConfig.backDrop = attrs.backDrop === 'true';
+        }
         var model = $parse(attrs.step);
         var backDrop = false;
 
@@ -228,6 +231,11 @@ angular.module('angular-tour.tour', [])
         //defaults: tourConfig.useSourceScope
         attrs.$observe( 'useSourceScope', function (val) {
           scope.ttSourceScope = !val ? tourConfig.useSourceScope : val === 'true';
+        });
+
+        //disable scrolling
+        attrs.$observe('disableScrolling', function (val) {
+          scope.disableScrolling = val === 'true';
         });
 
         //Init assignments (fix for Angular 1.3+)
@@ -362,7 +370,9 @@ angular.module('angular-tour.tour', [])
             tourtip.css( ttPosition );
 
             // Scroll to the tour tip
-            scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
+            if( !scope.disableScrolling ) {
+              scrollTo(tourtip, -200, -300, tourConfig.scrollSpeed);
+            }
           };
 
           if(tourConfig.backDrop)
