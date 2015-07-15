@@ -1,6 +1,6 @@
 /**
  * An AngularJS directive for showcasing features of your website
- * @version v0.1.2 - 2015-05-07
+ * @version v0.1.2 - 2015-07-15
  * @link https://github.com/DaftMonk/angular-tour
  * @author Tyler Henkel
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -267,6 +267,9 @@
                 top: top + position.height + scope.ttOffset,
                 left: position.left
               };
+              if (position.width < 50) {
+                ttPosition.left -= 22;
+              }
               break;
             case 'center':
               ttPosition = {

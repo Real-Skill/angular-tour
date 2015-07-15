@@ -305,6 +305,9 @@ angular.module('angular-tour.tour', [])
               top: top + position.height + scope.ttOffset,
               left: position.left
             };
+            if(position.width < 50) {
+              ttPosition.left -= 22;
+            }
             break;
           case 'center':
             ttPosition = {
